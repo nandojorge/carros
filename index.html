@@ -78,6 +78,23 @@
             justify-content: center;
             z-index: 1000;
         }
+        
+        .confirm-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        
+        .confirm-modal.show {
+            display: flex;
+        }
     </style>
 </head>
 <body class="gradient-bg min-h-screen">
@@ -121,6 +138,8 @@
 
         <!-- Cars Management View -->
         <div id="carsView" style="display: none;">
+
+
             <!-- Add Car Form -->
             <div class="glass-card rounded-3xl p-8 mb-8">
                 <h2 class="text-2xl font-bold text-slate-700 mb-8 flex items-center">
@@ -129,8 +148,12 @@
                 </h2>
                 <form id="carForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-3">Marca e Modelo</label>
-                        <input type="text" id="carName" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200" placeholder="Ex: BMW X3">
+                        <label class="block text-sm font-semibold text-gray-700 mb-3">Marca</label>
+                        <input type="text" id="carBrand" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200" placeholder="Ex: BMW, Mercedes, Toyota...">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-3">Modelo</label>
+                        <input type="text" id="carModel" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200" placeholder="Ex: X3, A4, C-Class">
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-3">Matrícula</label>
@@ -147,6 +170,18 @@
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-3">Pagamento do IUC</label>
                         <input type="date" id="iucDate" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-3">Logo da Marca (opcional)</label>
+                        <div class="flex items-center space-x-3">
+                            <input type="file" id="brandLogo" accept="image/*" class="hidden">
+                            <button type="button" onclick="document.getElementById('brandLogo').click()" class="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl hover:border-purple-300 transition-all duration-200 text-gray-600 hover:text-purple-600 font-medium">
+                                📷 Selecionar Imagem
+                            </button>
+                            <div id="logoPreview" class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 text-xs">
+                                Logo
+                            </div>
+                        </div>
                     </div>
                     <div class="flex items-end">
                         <button type="submit" class="w-full btn-primary text-indigo-800 font-semibold py-4 px-6 rounded-xl">
@@ -176,6 +211,26 @@
             </button>
         </div>
 
+        <!-- Confirmation Modal -->
+        <div id="confirmModal" class="confirm-modal">
+            <div class="glass-card rounded-3xl p-8 max-w-md mx-4">
+                <div class="text-center mb-6">
+                    <div class="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
+                        <span class="text-3xl">🗑️</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-700 mb-2">Eliminar Carro</h3>
+                    <p class="text-slate-500" id="confirmMessage">Tem a certeza que deseja eliminar este carro?</p>
+                </div>
+                <div class="flex space-x-4">
+                    <button onclick="cancelDelete()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-xl transition-all duration-300">
+                        Cancelar
+                    </button>
+                    <button onclick="confirmDelete()" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300">
+                        Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
 
     </div>
 
@@ -285,6 +340,59 @@
             return `${days} dias`;
         }
 
+        function getBrandIcon(brand, carLogo = null) {
+            // Check if car has a custom logo
+            if (carLogo) {
+                return `<img src="${carLogo}" alt="${brand}" class="w-8 h-8 object-contain rounded">`;
+            }
+
+            // Fallback to emoji icons
+            const brandIcons = {
+                'audi': '🅰️',
+                'bmw': '🔵',
+                'mercedes': '⭐',
+                'volkswagen': '🔷',
+                'ford': '🔵',
+                'opel': '⚡',
+                'peugeot': '🦁',
+                'renault': '💎',
+                'citroen': '🔺',
+                'fiat': '🇮🇹',
+                'seat': '🇪🇸',
+                'skoda': '🍀',
+                'toyota': '🔴',
+                'honda': '🅷',
+                'nissan': '🔵',
+                'mazda': '🌀',
+                'hyundai': '🅷',
+                'kia': '🔴',
+                'volvo': '🇸🇪',
+                'jaguar': '🐆',
+                'landrover': '🟢',
+                'porsche': '🏎️',
+                'mini': '🔵',
+                'alfa': '🐍',
+                'jeep': '🚙',
+                'dacia': '🔷',
+                'tesla': '⚡',
+                'lexus': '🔶',
+                'infiniti': '♾️',
+                'acura': '🅰️',
+                'subaru': '⭐',
+                'mitsubishi': '🔺',
+                'suzuki': '🔵',
+                'isuzu': '🔷',
+                'smart': '🔵',
+                'ds': '💎',
+                'lancia': '🔷',
+                'saab': '🇸🇪'
+            };
+            
+            return brandIcons[brand?.toLowerCase()] || '🚗';
+        }
+
+
+
         function getEventIcon(type) {
             switch(type) {
                 case 'inspection': return '🔧';
@@ -317,6 +425,7 @@
                     events.push({
                         carName: car.name,
                         licensePlate: car.licensePlate,
+                        brand: car.brand,
                         type: eventType.type,
                         date: eventType.date,
                         days: getDaysUntil(eventType.date)
@@ -366,24 +475,26 @@
                 const statusText = getStatusText(event.days);
                 
                 timelineHTML += `
-                    <div class="p-6 mb-4 rounded-2xl ${statusClass} card-hover">
+                    <div class="p-4 mb-4 rounded-2xl ${statusClass} card-hover">
                         <!-- Mobile Layout -->
                         <div class="block md:hidden">
-                            <div class="flex items-center space-x-4 mb-4">
-                                <div class="text-2xl bg-white/20 p-2 rounded-lg">${getEventIcon(event.type)}</div>
-                                <div class="flex-1">
-                                    <h3 class="font-semibold text-base">${event.carName}</h3>
-                                    <p class="opacity-80 font-medium text-sm">${event.licensePlate} • ${getEventName(event.type)}</p>
+                            <div class="flex items-start space-x-3 mb-4">
+                                <div class="bg-white/30 p-2 rounded-lg flex-shrink-0 flex items-center justify-center w-12 h-12">
+                                    ${getBrandIcon(event.brand, cars.find(c => c.licensePlate === event.licensePlate)?.logo)}
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="font-semibold text-base leading-tight mb-1">${event.carName}</h3>
+                                    <p class="opacity-80 font-medium text-sm leading-tight">${event.licensePlate}</p>
+                                    <p class="opacity-90 font-medium text-sm text-current">${getEventIcon(event.type)} ${getEventName(event.type)}</p>
                                 </div>
                             </div>
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <div class="font-semibold text-base">${formatDate(event.date)}</div>
-                                    <div class="opacity-80 font-medium text-sm">${statusText}</div>
+                            <div class="flex items-center justify-between pt-2 border-t border-white/20">
+                                <div class="flex-1">
+                                    <div class="font-semibold text-base mb-1">${formatDate(event.date)}</div>
+                                    <div class="opacity-90 font-medium text-sm">${statusText}</div>
                                 </div>
-                                <button onclick="addToGoogleCalendar(event, ${index})" class="bg-white/40 hover:bg-white/60 text-gray-700 text-sm px-4 py-2 rounded-xl transition-all duration-200 flex items-center space-x-2">
-                                    <span>📅</span>
-                                    <span class="hidden sm:inline">Calendar</span>
+                                <button onclick="addToGoogleCalendar(event, ${index})" class="bg-white/40 hover:bg-white/60 text-gray-700 w-10 h-10 rounded-lg transition-all duration-200 flex items-center justify-center flex-shrink-0 ml-3">
+                                    <span class="text-lg">📅</span>
                                 </button>
                             </div>
                         </div>
@@ -391,20 +502,21 @@
                         <!-- Desktop Layout -->
                         <div class="hidden md:flex items-center justify-between">
                             <div class="flex items-center space-x-4">
-                                <div class="text-3xl bg-white/20 p-3 rounded-lg">${getEventIcon(event.type)}</div>
+                                <div class="bg-white/20 p-3 rounded-lg flex items-center justify-center w-16 h-16">
+                                    ${getBrandIcon(event.brand, cars.find(c => c.licensePlate === event.licensePlate)?.logo)}
+                                </div>
                                 <div>
                                     <div class="flex items-center space-x-3 mb-1">
                                         <h3 class="font-semibold text-lg">${event.carName}</h3>
                                         <span class="opacity-60">•</span>
                                         <span class="opacity-90 font-medium text-sm">${event.licensePlate}</span>
                                     </div>
-                                    <p class="opacity-90 font-medium text-sm">${getEventName(event.type)}</p>
+                                    <p class="opacity-90 font-medium text-sm">${getEventIcon(event.type)} ${getEventName(event.type)}</p>
                                 </div>
                             </div>
                             <div class="flex items-center space-x-4">
-                                <button onclick="addToGoogleCalendar(event, ${index})" class="bg-white/40 hover:bg-white/60 text-gray-700 text-sm px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2 font-medium">
-                                    <span>📅</span>
-                                    <span>Adicionar ao Calendar</span>
+                                <button onclick="addToGoogleCalendar(event, ${index})" class="bg-white/40 hover:bg-white/60 text-gray-700 w-12 h-12 rounded-lg transition-all duration-200 flex items-center justify-center">
+                                    <span class="text-xl">📅</span>
                                 </button>
                                 <div class="text-right">
                                     <div class="font-semibold text-base">${formatDate(event.date)}</div>
@@ -474,15 +586,16 @@
                 return `
                     <div class="glass-card rounded-3xl p-6 card-hover">
                         <div class="flex justify-between items-start mb-6">
-                            <div>
-                                <h3 class="text-xl font-semibold text-slate-700 mb-1">${car.name}</h3>
-                                <p class="text-slate-500 font-medium text-base">${car.licensePlate}</p>
+                            <div class="flex items-center space-x-4">
+                                <div class="bg-slate-100 p-3 rounded-xl flex items-center justify-center w-16 h-16">
+                                    ${getBrandIcon(car.brand, car.logo)}
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-semibold text-slate-700 mb-1">${car.name}</h3>
+                                    <p class="text-slate-500 font-medium text-base">${car.licensePlate}</p>
+                                </div>
                             </div>
-                            <button onclick="deleteCar(${index})" class="text-red-500 hover:text-red-700 transition-colors duration-200 bg-red-50 hover:bg-red-100 p-2 rounded-xl">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                </svg>
-                            </button>
+
                         </div>
 
                         <div class="space-y-4">
@@ -511,9 +624,14 @@
                             </div>
                         </div>
 
-                        <button onclick="editCar(${index})" class="mt-6 w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-4 px-6 rounded-2xl transition-all duration-300 hover:scale-105">
-                            <span class="text-lg mr-2">✏️</span>Editar Datas
-                        </button>
+                        <div class="mt-6 grid grid-cols-2 gap-3">
+                            <button onclick="editCar(${index})" class="bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold py-3 px-4 rounded-xl transition-all duration-300 hover:scale-105">
+                                <span class="text-lg mr-2">✏️</span>Editar
+                            </button>
+                            <button onclick="deleteCar(${index})" class="bg-red-100 hover:bg-red-200 text-red-700 font-bold py-3 px-4 rounded-xl transition-all duration-300 hover:scale-105">
+                                <span class="text-lg mr-2">🗑️</span>Apagar
+                            </button>
+                        </div>
                     </div>
                 `;
             }).join('');
@@ -524,81 +642,174 @@
             document.getElementById('carsView').style.display = 'none';
             document.getElementById('emptyState').style.display = cars.length === 0 ? 'block' : 'none';
             
-            document.getElementById('dashboardBtn').className = 'px-6 py-2 rounded-md font-medium transition-colors duration-200 bg-gray-900 text-white';
-            document.getElementById('carsBtn').className = 'px-6 py-2 rounded-md font-medium transition-colors duration-200 text-gray-600 hover:text-gray-900';
+            document.getElementById('dashboardBtn').className = 'px-8 py-3 rounded-xl font-semibold transition-all duration-300 bg-slate-200 text-slate-700 shadow-sm';
+            document.getElementById('carsBtn').className = 'px-8 py-3 rounded-xl font-semibold transition-all duration-300 text-slate-500 hover:text-slate-700 hover:bg-slate-100';
             
             renderDashboard();
         }
+
+
 
         function showCars() {
             document.getElementById('dashboardView').style.display = 'none';
             document.getElementById('carsView').style.display = 'block';
             document.getElementById('emptyState').style.display = 'none';
             
-            document.getElementById('dashboardBtn').className = 'px-6 py-2 rounded-md font-medium transition-colors duration-200 text-gray-600 hover:text-gray-900';
-            document.getElementById('carsBtn').className = 'px-6 py-2 rounded-md font-medium transition-colors duration-200 bg-gray-900 text-white';
+            document.getElementById('dashboardBtn').className = 'px-8 py-3 rounded-xl font-semibold transition-all duration-300 text-slate-500 hover:text-slate-700 hover:bg-slate-100';
+            document.getElementById('carsBtn').className = 'px-8 py-3 rounded-xl font-semibold transition-all duration-300 bg-slate-200 text-slate-700 shadow-sm';
             
             renderCars();
         }
 
+        let carToDelete = null;
+
         function deleteCar(index) {
-            if (confirm('Tem a certeza que deseja eliminar este carro?')) {
-                cars.splice(index, 1);
+            carToDelete = index;
+            const car = cars[index];
+            document.getElementById('confirmMessage').textContent = `Tem a certeza que deseja eliminar o ${car.name} (${car.licensePlate})?`;
+            document.getElementById('confirmModal').classList.add('show');
+        }
+
+        function cancelDelete() {
+            carToDelete = null;
+            document.getElementById('confirmModal').classList.remove('show');
+        }
+
+        function confirmDelete() {
+            if (carToDelete !== null) {
+                cars.splice(carToDelete, 1);
                 saveCars();
                 renderCars();
                 renderDashboard();
+                
+                // If no cars left, show empty state
+                if (cars.length === 0) {
+                    showDashboard();
+                }
+                
+                carToDelete = null;
+                document.getElementById('confirmModal').classList.remove('show');
             }
         }
 
         function editCar(index) {
             const car = cars[index];
-            document.getElementById('carName').value = car.name;
+            document.getElementById('carBrand').value = car.brand || '';
+            document.getElementById('carModel').value = car.model || '';
             document.getElementById('licensePlate').value = car.licensePlate;
             document.getElementById('inspectionDate').value = car.inspectionDate;
             document.getElementById('insuranceDate').value = car.insuranceDate;
             document.getElementById('iucDate').value = car.iucDate;
 
-            // Remove the car temporarily for editing
-            cars.splice(index, 1);
-            saveCars();
-            renderCars();
-            renderDashboard();
+            // Show existing logo if available
+            const logoPreview = document.getElementById('logoPreview');
+            if (car.logo) {
+                logoPreview.innerHTML = `<img src="${car.logo}" alt="Logo" class="w-full h-full object-contain rounded">`;
+            } else {
+                logoPreview.innerHTML = 'Logo';
+                logoPreview.className = 'w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 text-xs';
+            }
+
+            // Store the index for editing
+            document.getElementById('carForm').dataset.editIndex = index;
+
+            // Change button text to indicate editing
+            const submitButton = document.querySelector('#carForm button[type="submit"]');
+            submitButton.innerHTML = '<span class="text-lg mr-2">✏️</span>Atualizar Carro';
 
             // Scroll to form
             document.getElementById('carForm').scrollIntoView({ behavior: 'smooth' });
         }
 
+        // Logo preview functionality
+        document.getElementById('brandLogo').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const preview = document.getElementById('logoPreview');
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.innerHTML = `<img src="${e.target.result}" alt="Logo Preview" class="w-full h-full object-contain rounded">`;
+                    preview.className = 'w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.innerHTML = 'Logo';
+                preview.className = 'w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 text-xs';
+            }
+        });
+
         document.getElementById('carForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
-            const newCar = {
-                name: document.getElementById('carName').value,
+            const brand = document.getElementById('carBrand').value;
+            const model = document.getElementById('carModel').value;
+            const carName = `${brand} ${model}`;
+            
+            const carData = {
+                name: carName,
+                brand: brand,
+                model: model,
                 licensePlate: document.getElementById('licensePlate').value,
                 inspectionDate: document.getElementById('inspectionDate').value,
                 insuranceDate: document.getElementById('insuranceDate').value,
                 iucDate: document.getElementById('iucDate').value
             };
 
-            cars.push(newCar);
-            saveCars();
-            renderCars();
-            renderDashboard();
+            // Handle logo upload
+            const logoFile = document.getElementById('brandLogo').files[0];
+            const editIndex = this.dataset.editIndex;
+            
+            if (logoFile) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    carData.logo = e.target.result;
+                    saveCarData();
+                };
+                reader.readAsDataURL(logoFile);
+            } else {
+                // If editing and no new logo selected, keep existing logo
+                if (editIndex !== undefined) {
+                    carData.logo = cars[parseInt(editIndex)].logo;
+                }
+                saveCarData();
+            }
 
-            // Clear form
-            this.reset();
-            
-            // Show success message
-            const button = this.querySelector('button[type="submit"]');
-            const originalText = button.textContent;
-            button.textContent = 'Carro Adicionado!';
-            button.classList.add('bg-green-600');
-            button.classList.remove('bg-gray-900');
-            
-            setTimeout(() => {
-                button.textContent = originalText;
-                button.classList.remove('bg-green-600');
-                button.classList.add('bg-gray-900');
-            }, 2000);
+            function saveCarData() {
+                const button = document.querySelector('#carForm button[type="submit"]');
+                const form = document.getElementById('carForm');
+                
+                if (editIndex !== undefined) {
+                    // Editing existing car
+                    cars[parseInt(editIndex)] = carData;
+                    button.textContent = 'Carro Atualizado!';
+                    delete form.dataset.editIndex;
+                } else {
+                    // Adding new car
+                    cars.push(carData);
+                    button.textContent = 'Carro Adicionado!';
+                }
+
+                saveCars();
+                renderCars();
+                renderDashboard();
+
+                // Clear form and logo preview
+                form.reset();
+                const logoPreview = document.getElementById('logoPreview');
+                logoPreview.innerHTML = 'Logo';
+                logoPreview.className = 'w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 text-xs';
+                
+                // Show success message
+                button.classList.add('bg-green-600');
+                button.classList.remove('bg-gray-900');
+                
+                setTimeout(() => {
+                    button.innerHTML = '<span class="text-lg mr-2">🚗</span>Adicionar Carro';
+                    button.classList.remove('bg-green-600');
+                    button.classList.add('bg-gray-900');
+                }, 2000);
+            }
         });
 
 
@@ -612,5 +823,5 @@
         // Initial render
         initApp();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98ac7422d346e3b0',t:'MTc1OTgzMDIwMC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98acadded78ce3b0',t:'MTc1OTgzMjU2NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
