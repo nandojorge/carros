@@ -4,7 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestão de Carros</title>
+    <link rel="icon" type="image/x-icon" href="imagens/car.ico">
+    <link rel="shortcut icon" href="imagens/car.ico">
+    <link rel="apple-touch-icon" href="imagens/car.png">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -95,6 +99,39 @@
         .confirm-modal.show {
             display: flex;
         }
+
+        .alert-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #fbbf24;
+            color: #92400e;
+            padding: 16px 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            z-index: 3000;
+            max-width: 400px;
+            border-left: 4px solid #f59e0b;
+        }
+
+        .email-status {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .email-enabled {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .email-disabled {
+            background: #fef2f2;
+            color: #991b1b;
+        }
     </style>
 </head>
 <body class="gradient-bg min-h-screen">
@@ -106,17 +143,18 @@
             </div>
             <h1 class="text-2xl font-bold text-slate-700 mb-2">Dashboard de Carros</h1>
             <p class="text-slate-500 text-sm">Gerencie os eventos dos seus veículos</p>
+            <div id="emailStatus" class="mt-2">
+                <span class="email-status email-disabled">📧 Email Automático: Desativado</span>
+            </div>
         </div>
-
-
 
         <!-- Navigation -->
         <div class="flex justify-center mb-8">
-            <div class="glass-card rounded-2xl p-2 flex space-x-2">
-                <button id="dashboardBtn" onclick="showDashboard()" class="px-8 py-3 rounded-xl font-semibold transition-all duration-300 bg-slate-200 text-slate-700 shadow-sm">
+            <div class="glass-card rounded-2xl p-2 flex flex-wrap justify-center gap-2">
+                <button id="dashboardBtn" onclick="showDashboard()" class="px-6 py-3 rounded-xl font-semibold transition-all duration-300 bg-slate-200 text-slate-700 shadow-sm">
                     📊 Dashboard
                 </button>
-                <button id="carsBtn" onclick="showCars()" class="px-8 py-3 rounded-xl font-semibold transition-all duration-300 text-slate-500 hover:text-slate-700 hover:bg-slate-100">
+                <button id="carsBtn" onclick="showCars()" class="px-6 py-3 rounded-xl font-semibold transition-all duration-300 text-slate-500 hover:text-slate-700 hover:bg-slate-100">
                     🚗 Gerir Carros
                 </button>
             </div>
@@ -136,10 +174,130 @@
             </div>
         </div>
 
+        <!-- Email Configuration View -->
+        <div id="emailConfigView" style="display: none;">
+            <div class="glass-card rounded-3xl p-8 mb-8">
+                <h2 class="text-2xl font-bold text-slate-700 mb-8 flex items-center">
+                    <span class="mr-4">📧</span>
+                    Configuração de Email Automático
+                </h2>
+                
+                <div class="bg-blue-50 border border-blue-200 rounded-2xl p-6 mb-8">
+                    <div class="flex items-start space-x-4">
+                        <div id="statusIcon" class="text-2xl">❌</div>
+                        <div class="flex-1">
+                            <h3 id="statusText" class="font-semibold text-blue-800 mb-2">Email automático desativado</h3>
+                            <p id="configDetails" class="text-blue-600 text-sm">Configure os campos abaixo para ativar o envio automático</p>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="emailConfigForm" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">Service ID</label>
+                            <input type="text" id="serviceId" placeholder="service_xxxxxxx" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">Template ID</label>
+                            <input type="text" id="templateId" placeholder="template_xxxxxxx" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-3">Public Key</label>
+                        <input type="text" id="publicKey" placeholder="Sua chave pública do EmailJS" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                    </div>
+                    
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300">
+                            <span class="text-lg mr-2">💾</span>
+                            Salvar Configuração
+                        </button>
+                        <button type="button" onclick="testEmailConfig()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300">
+                            <span class="text-lg mr-2">🧪</span>
+                            Testar Configuração
+                        </button>
+                    </div>
+                </form>
+
+                <div class="mt-8 p-6 bg-gray-50 rounded-2xl">
+                    <h3 class="font-semibold text-gray-700 mb-4 flex items-center">
+                        <span class="mr-2">⚡</span>
+                        Teste Rápido
+                    </h3>
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <input type="email" id="quickTestEmail" placeholder="Digite um email para teste..." class="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200">
+                        <button onclick="quickTestEmail()" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 whitespace-nowrap">
+                            <span class="mr-2">📤</span>Enviar Teste
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mt-8 p-6 bg-yellow-50 border border-yellow-200 rounded-2xl">
+                    <h3 class="font-semibold text-yellow-800 mb-3">📋 Como Configurar:</h3>
+                    <ol class="text-yellow-700 text-sm space-y-2 list-decimal list-inside">
+                        <li>Acesse <a href="https://www.emailjs.com" target="_blank" rel="noopener noreferrer" class="underline hover:text-yellow-900">emailjs.com</a> e crie uma conta gratuita</li>
+                        <li>Crie um novo serviço de email (Gmail, Outlook, etc.)</li>
+                        <li>Crie um template com as variáveis: to_email, subject, message</li>
+                        <li>Copie o Service ID, Template ID e Public Key para os campos acima</li>
+                        <li>Clique em "Salvar Configuração" e teste o envio</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration View -->
+        <div id="configView" style="display: none;">
+            <div class="glass-card rounded-3xl p-8">
+                <h2 class="text-2xl font-bold text-slate-700 mb-8 flex items-center">
+                    <span class="mr-4">⚙️</span>
+                    Configuração da Base de Dados
+                </h2>
+                
+                <div class="bg-green-50 border border-green-200 rounded-2xl p-6 mb-8">
+                    <div class="flex items-start space-x-4">
+                        <div class="text-2xl">✅</div>
+                        <div>
+                            <h3 class="font-semibold text-green-800 mb-2">JSONBin configurado e funcionando</h3>
+                            <p class="text-green-600 text-sm">Os dados são automaticamente sincronizados na nuvem</p>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="configForm" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-3">API Key do JSONBin</label>
+                        <input type="password" id="apiKey" placeholder="$2a$10$..." class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200">
+                        <p class="text-gray-500 text-sm mt-2">Chave de API para sincronização automática dos dados</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-3">Bin ID (opcional)</label>
+                        <input type="text" id="binId" placeholder="68e4d92dd0ea881f40983660" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200">
+                        <p class="text-gray-500 text-sm mt-2">ID do bin existente (deixe vazio para criar novo)</p>
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300">
+                        <span class="text-lg mr-2">💾</span>
+                        Salvar Configuração
+                    </button>
+                </form>
+
+                <div class="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-2xl">
+                    <h3 class="font-semibold text-blue-800 mb-3">📋 Como Configurar:</h3>
+                    <ol class="text-blue-700 text-sm space-y-2 list-decimal list-inside">
+                        <li>Acesse <a href="https://jsonbin.io" target="_blank" rel="noopener noreferrer" class="underline hover:text-blue-900">jsonbin.io</a> e crie uma conta gratuita</li>
+                        <li>Gere uma API Key na secção "API Keys"</li>
+                        <li>Cole a API Key no campo acima</li>
+                        <li>Deixe o Bin ID vazio na primeira configuração</li>
+                        <li>O sistema criará automaticamente um novo bin para os seus dados</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
         <!-- Cars Management View -->
         <div id="carsView" style="display: none;">
-
-
             <!-- Add Car Form -->
             <div class="glass-card rounded-3xl p-8 mb-8">
                 <h2 class="text-2xl font-bold text-slate-700 mb-8 flex items-center">
@@ -160,6 +318,10 @@
                         <input type="text" id="licensePlate" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200" placeholder="Ex: 12-AB-34">
                     </div>
                     <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-3">Email para Alertas</label>
+                        <input type="email" id="alertEmail" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200" placeholder="exemplo@email.com">
+                    </div>
+                    <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-3">Próxima Inspeção</label>
                         <input type="date" id="inspectionDate" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200">
                     </div>
@@ -173,13 +335,16 @@
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-3">Logo da Marca (opcional)</label>
-                        <div class="flex items-center space-x-3">
-                            <input type="file" id="brandLogo" accept="image/*" class="hidden">
-                            <button type="button" onclick="document.getElementById('brandLogo').click()" class="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl hover:border-purple-300 transition-all duration-200 text-gray-600 hover:text-purple-600 font-medium">
-                                📷 Selecionar Imagem
-                            </button>
-                            <div id="logoPreview" class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 text-xs">
-                                Logo
+                        <div class="space-y-3">
+                            <input type="url" id="logoUrl" placeholder="https://exemplo.com/logo.png" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200">
+                            <div class="flex items-center space-x-3">
+                                <input type="file" id="brandLogo" accept="image/*" class="hidden">
+                                <button type="button" onclick="document.getElementById('brandLogo').click()" class="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl hover:border-purple-300 transition-all duration-200 text-gray-600 hover:text-purple-600 font-medium">
+                                    📷 Ou Selecionar Ficheiro
+                                </button>
+                                <div id="logoPreview" class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 text-xs">
+                                    Logo
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -197,6 +362,8 @@
                 <!-- Cars will be displayed here -->
             </div>
         </div>
+
+
 
         <!-- Empty State -->
         <div id="emptyState" class="text-center py-20">
@@ -231,15 +398,263 @@
                 </div>
             </div>
         </div>
-
     </div>
 
     <script>
         let cars = JSON.parse(localStorage.getItem('cars')) || [];
-        let config = {
+        let config = JSON.parse(localStorage.getItem('config')) || {
             apiKey: '$2a$10$p2B6kIgO16ed1z49Jr3RNeVTN0uabdyVXVjlSsqctFLPfxeuymD.u',
             binId: '68e4d92dd0ea881f40983660'
         };
+
+        // EmailJS Configuration - Configuração integrada para testes
+        let emailConfig = JSON.parse(localStorage.getItem('emailConfig')) || {
+            serviceId: 'service_d34nyfr',
+            templateId: 'template_sqi1nbq',
+            publicKey: '3OUBFn_u0ezzG0otC',
+            enabled: false
+        };
+
+        // Auto-enable if all fields are configured
+        if (emailConfig.serviceId && emailConfig.templateId && emailConfig.publicKey && emailConfig.publicKey !== 'YOUR_EMAILJS_PUBLIC_KEY_HERE') {
+            emailConfig.enabled = true;
+            localStorage.setItem('emailConfig', JSON.stringify(emailConfig));
+        }
+        
+        // Force enable with the new configuration
+        emailConfig.enabled = true;
+        localStorage.setItem('emailConfig', JSON.stringify(emailConfig));
+
+        // Initialize EmailJS
+        function initEmailJS() {
+            if (emailConfig.publicKey && emailConfig.enabled) {
+                emailjs.init(emailConfig.publicKey);
+                console.log('EmailJS initialized successfully');
+                updateEmailStatus(true);
+            } else {
+                updateEmailStatus(false);
+            }
+        }
+
+        function updateEmailStatus(enabled) {
+            const statusElement = document.getElementById('emailStatus');
+            const statusIcon = document.getElementById('statusIcon');
+            const statusText = document.getElementById('statusText');
+            const configDetails = document.getElementById('configDetails');
+            
+            if (enabled && emailConfig.serviceId && emailConfig.templateId && emailConfig.publicKey) {
+                statusElement.innerHTML = '<span class="email-status email-enabled">📧 Email Automático: Ativado</span>';
+                if (statusIcon) statusIcon.textContent = '✅';
+                if (statusText) statusText.textContent = 'Email automático ativado e funcionando';
+                if (configDetails) configDetails.textContent = `Service: ${emailConfig.serviceId} | Template: ${emailConfig.templateId}`;
+            } else {
+                statusElement.innerHTML = '<span class="email-status email-disabled">📧 Email Automático: Desativado</span>';
+                if (statusIcon) statusIcon.textContent = '❌';
+                if (statusText) statusText.textContent = 'Email automático desativado';
+                if (configDetails) configDetails.textContent = 'Configure os campos acima para ativar o envio automático';
+            }
+        }
+
+        function showEmailConfig() {
+            document.getElementById('dashboardView').style.display = 'none';
+            document.getElementById('carsView').style.display = 'none';
+            document.getElementById('emailConfigView').style.display = 'block';
+            document.getElementById('configView').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+            
+            // Update button states
+            document.getElementById('dashboardBtn').className = 'px-6 py-3 rounded-xl font-semibold transition-all duration-300 text-slate-500 hover:text-slate-700 hover:bg-slate-100';
+            document.getElementById('carsBtn').className = 'px-6 py-3 rounded-xl font-semibold transition-all duration-300 text-slate-500 hover:text-slate-700 hover:bg-slate-100';
+            document.getElementById('emailBtn').className = 'px-6 py-3 rounded-xl font-semibold transition-all duration-300 bg-slate-200 text-slate-700 shadow-sm';
+            document.getElementById('configBtn').className = 'px-6 py-3 rounded-xl font-semibold transition-all duration-300 text-slate-500 hover:text-slate-700 hover:bg-slate-100';
+            
+            // Load current config
+            document.getElementById('serviceId').value = emailConfig.serviceId || '';
+            document.getElementById('templateId').value = emailConfig.templateId || '';
+            document.getElementById('publicKey').value = emailConfig.publicKey || '';
+            
+            updateEmailStatus(emailConfig.enabled);
+        }
+
+        function showConfig() {
+            document.getElementById('dashboardView').style.display = 'none';
+            document.getElementById('carsView').style.display = 'none';
+            document.getElementById('emailConfigView').style.display = 'none';
+            document.getElementById('configView').style.display = 'block';
+            document.getElementById('emptyState').style.display = 'none';
+            
+            // Update button states
+            document.getElementById('dashboardBtn').className = 'px-6 py-3 rounded-xl font-semibold transition-all duration-300 text-slate-500 hover:text-slate-700 hover:bg-slate-100';
+            document.getElementById('carsBtn').className = 'px-6 py-3 rounded-xl font-semibold transition-all duration-300 text-slate-500 hover:text-slate-700 hover:bg-slate-100';
+            document.getElementById('emailBtn').className = 'px-6 py-3 rounded-xl font-semibold transition-all duration-300 text-slate-500 hover:text-slate-700 hover:bg-slate-100';
+            document.getElementById('configBtn').className = 'px-6 py-3 rounded-xl font-semibold transition-all duration-300 bg-slate-200 text-slate-700 shadow-sm';
+            
+            // Load current config
+            document.getElementById('apiKey').value = config.apiKey || '';
+            document.getElementById('binId').value = config.binId || '';
+        }
+
+        document.getElementById('emailConfigForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            emailConfig.serviceId = document.getElementById('serviceId').value.trim();
+            emailConfig.templateId = document.getElementById('templateId').value.trim();
+            emailConfig.publicKey = document.getElementById('publicKey').value.trim();
+            emailConfig.enabled = !!(emailConfig.serviceId && emailConfig.templateId && emailConfig.publicKey);
+            
+            localStorage.setItem('emailConfig', JSON.stringify(emailConfig));
+            
+            if (emailConfig.enabled) {
+                initEmailJS();
+                showNotification('✅ Email automático ativado com sucesso!', 'info');
+            } else {
+                showNotification('❌ Preencha todos os campos para ativar', 'warning');
+            }
+            
+            updateEmailStatus(emailConfig.enabled);
+        });
+
+        document.getElementById('configForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            config.apiKey = document.getElementById('apiKey').value.trim();
+            config.binId = document.getElementById('binId').value.trim();
+            
+            localStorage.setItem('config', JSON.stringify(config));
+            
+            showNotification('✅ Configuração da BD salva com sucesso!', 'info');
+            
+            // Test the configuration by trying to save current data
+            if (config.apiKey) {
+                saveToJSONBin(cars);
+            }
+        });
+
+        function testEmailConfig() {
+            if (!emailConfig.enabled || !emailConfig.serviceId || !emailConfig.templateId || !emailConfig.publicKey) {
+                showNotification('❌ Configure primeiro todos os campos!', 'warning');
+                return;
+            }
+
+            const testEmail = prompt('Digite um email para teste:');
+            if (!testEmail) return;
+
+            const testData = {
+                to_email: testEmail,
+                subject: '🧪 Teste - Sistema de Alertas de Carros',
+                message: `Este é um email de teste do seu sistema de gestão de carros.
+
+Se recebeu este email, significa que a configuração está funcionando perfeitamente! ✅
+
+O sistema irá agora enviar alertas automáticos para:
+- Inspeções próximas do vencimento
+- Seguros a expirar  
+- Pagamentos de IUC em atraso
+
+Configuração testada em: ${new Date().toLocaleString('pt-PT')}
+
+Sistema de Gestão de Carros`
+            };
+
+            sendEmailViaEmailJS(testData)
+                .then(() => {
+                    showNotification('✅ Email de teste enviado! Verifique a caixa de entrada.', 'info');
+                })
+                .catch((error) => {
+                    showNotification('❌ Erro no teste. Verifique a configuração.', 'warning');
+                    console.error('Test email error:', error);
+                });
+        }
+
+        function quickTestEmail() {
+            const emailInput = document.getElementById('quickTestEmail');
+            const testEmail = emailInput.value.trim();
+            
+            if (!testEmail) {
+                showNotification('❌ Digite um email válido!', 'warning');
+                emailInput.focus();
+                return;
+            }
+
+            if (!emailConfig.enabled || !emailConfig.serviceId || !emailConfig.templateId || !emailConfig.publicKey) {
+                showNotification('❌ Configure primeiro todos os campos acima!', 'warning');
+                return;
+            }
+
+            // Show loading state
+            const button = document.querySelector('button[onclick="quickTestEmail()"]');
+            const originalText = button.innerHTML;
+            button.innerHTML = '<span class="mr-2">⏳</span>Enviando...';
+            button.disabled = true;
+
+            const testData = {
+                to_email: testEmail,
+                subject: '⚡ Teste Rápido - Dashboard de Carros',
+                message: `Olá! 👋
+
+Este é um teste rápido do seu sistema de gestão de carros.
+
+✅ SUCESSO! A configuração está funcionando perfeitamente!
+
+Agora o sistema pode enviar alertas automáticos para:
+📧 Inspeções próximas do vencimento
+🛡️ Seguros a expirar  
+💰 Pagamentos de IUC em atraso
+
+📅 Teste realizado: ${new Date().toLocaleString('pt-PT')}
+📧 Email testado: ${testEmail}
+
+O sistema está pronto para uso! 🚀
+
+---
+Dashboard de Carros - Sistema Automático`
+            };
+
+            sendEmailViaEmailJS(testData)
+                .then(() => {
+                    showNotification('🎉 Teste enviado com sucesso! Verifique a caixa de entrada.', 'info');
+                    emailInput.value = '';
+                    button.innerHTML = '<span class="mr-2">✅</span>Enviado!';
+                    button.style.backgroundColor = '#16a34a';
+                    
+                    setTimeout(() => {
+                        button.innerHTML = originalText;
+                        button.style.backgroundColor = '';
+                        button.disabled = false;
+                    }, 3000);
+                })
+                .catch((error) => {
+                    showNotification('❌ Erro no envio. Verifique a configuração.', 'warning');
+                    console.error('Quick test email error:', error);
+                    button.innerHTML = '<span class="mr-2">❌</span>Erro';
+                    button.style.backgroundColor = '#dc2626';
+                    
+                    setTimeout(() => {
+                        button.innerHTML = originalText;
+                        button.style.backgroundColor = '';
+                        button.disabled = false;
+                    }, 3000);
+                });
+        }
+
+        async function sendEmailViaEmailJS(emailData) {
+            if (!emailConfig.enabled) {
+                throw new Error('EmailJS not configured');
+            }
+
+            try {
+                const response = await emailjs.send(
+                    emailConfig.serviceId,
+                    emailConfig.templateId,
+                    emailData
+                );
+                console.log('Email sent successfully:', response);
+                return response;
+            } catch (error) {
+                console.error('EmailJS error:', error);
+                throw error;
+            }
+        }
 
         // JSONBin API functions
         async function saveToJSONBin(data) {
@@ -391,8 +806,6 @@
             return brandIcons[brand?.toLowerCase()] || '🚗';
         }
 
-
-
         function getEventIcon(type) {
             switch(type) {
                 case 'inspection': return '🔧';
@@ -426,6 +839,7 @@
                         carName: car.name,
                         licensePlate: car.licensePlate,
                         brand: car.brand,
+                        alertEmail: car.alertEmail,
                         type: eventType.type,
                         date: eventType.date,
                         days: getDaysUntil(eventType.date)
@@ -436,6 +850,268 @@
             // Sort by date (closest first)
             events.sort((a, b) => a.days - b.days);
             return events;
+        }
+
+        function checkAlerts() {
+            const events = getAllEvents();
+            const alertEvents = events.filter(event => 
+                (event.days === 30 || event.days === 15) && event.alertEmail
+            );
+
+            if (alertEvents.length > 0) {
+                console.log(`Enviando ${alertEvents.length} alertas automáticos...`);
+                alertEvents.forEach(event => {
+                    sendEmailAlert(event);
+                });
+            }
+        }
+
+        async function sendEmailAlert(event) {
+            if (!event.alertEmail) {
+                showNotification('Email não configurado para este veículo!', 'info');
+                return;
+            }
+
+            const eventName = getEventName(event.type);
+            const subject = `🚨 Alerta: ${eventName} - ${event.carName} (${event.licensePlate})`;
+            
+            let message = '';
+            if (event.days === 30) {
+                message = `Caro(a) proprietário(a),
+
+Este é um lembrete de que falta exatamente 1 MÊS para o vencimento do ${eventName.toLowerCase()} do seu veículo:
+
+`;
+            } else if (event.days === 15) {
+                message = `Caro(a) proprietário(a),
+
+⚠️ ATENÇÃO: Faltam apenas 15 DIAS para o vencimento do ${eventName.toLowerCase()} do seu veículo:
+
+`;
+            } else if (event.days === 7) {
+                message = `Caro(a) proprietário(a),
+
+🚨 URGENTE: Falta apenas 1 SEMANA para o vencimento do ${eventName.toLowerCase()} do seu veículo:
+
+`;
+            } else if (event.days === 1) {
+                message = `Caro(a) proprietário(a),
+
+🚨 MUITO URGENTE: O ${eventName.toLowerCase()} do seu veículo vence AMANHÃ:
+
+`;
+            } else if (event.days === 0) {
+                message = `Caro(a) proprietário(a),
+
+🚨 CRÍTICO: O ${eventName.toLowerCase()} do seu veículo vence HOJE:
+
+`;
+            } else {
+                message = `Caro(a) proprietário(a),
+
+Lembrete sobre o ${eventName.toLowerCase()} do seu veículo:
+
+`;
+            }
+            
+            message += `🚗 Veículo: ${event.carName}
+📋 Matrícula: ${event.licensePlate}
+📅 Data de vencimento: ${formatDate(event.date)}
+⏰ Dias restantes: ${event.days}
+
+`;
+            
+            switch(event.type) {
+                case 'inspection':
+                    message += `Por favor, agende a inspeção periódica obrigatória do seu veículo o mais breve possível para evitar multas e problemas legais.
+
+`;
+                    break;
+                case 'insurance':
+                    message += `Por favor, proceda à renovação do seguro automóvel para evitar ficar sem cobertura e circular ilegalmente.
+
+`;
+                    break;
+                case 'iuc':
+                    message += `Por favor, efetue o pagamento do Imposto Único de Circulação (IUC) para evitar multas e apreensão do veículo.
+
+`;
+                    break;
+            }
+            
+            message += `Este é um lembrete automático do seu Dashboard de Carros.
+
+Cumprimentos,
+Sistema de Gestão de Carros`;
+
+            // Try to send via EmailJS first, fallback to manual method
+            if (emailConfig.enabled) {
+                try {
+                    await sendEmailViaEmailJS({
+                        to_email: event.alertEmail,
+                        subject: subject,
+                        message: message
+                    });
+                    showNotification(`✅ Email enviado automaticamente para ${event.alertEmail}!`, 'info');
+                    return;
+                } catch (error) {
+                    console.error('EmailJS failed, falling back to manual method:', error);
+                    showNotification('⚠️ Falha no envio automático. Abrindo método manual...', 'warning');
+                }
+            }
+
+            // Fallback to manual method
+            showEmailModal(event.alertEmail, subject, message);
+        }
+
+        function showEmailModal(email, subject, message) {
+            const modal = document.createElement('div');
+            modal.className = 'confirm-modal show';
+            
+            modal.innerHTML = `
+                <div class="glass-card rounded-3xl p-8 max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
+                    <div class="text-center mb-6">
+                        <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+                            <span class="text-3xl">📧</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-slate-700 mb-2">Email de Alerta Preparado</h3>
+                        <p class="text-slate-500">Copie o conteúdo e cole no seu cliente de email</p>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-6 rounded-xl mb-6 space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">📧 Para:</label>
+                                <input type="text" value="${email}" readonly class="w-full p-3 bg-white border rounded-lg text-sm font-mono" onclick="this.select()">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">📋 Assunto:</label>
+                                <input type="text" value="${subject}" readonly class="w-full p-3 bg-white border rounded-lg text-sm font-mono" onclick="this.select()">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">💬 Mensagem:</label>
+                            <textarea readonly class="w-full h-48 p-3 bg-white border rounded-lg text-sm font-mono resize-none" onclick="this.select()">${message}</textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <button onclick="tryMailtoLink('${email}', '${encodeURIComponent(subject)}', '${encodeURIComponent(message)}')" class="bg-green-100 hover:bg-green-200 text-green-700 font-semibold py-3 px-4 rounded-xl transition-all duration-300">
+                            📧 Abrir Email
+                        </button>
+                        <button onclick="copyEmailContent('${email}', '${subject.replace(/'/g, "\\'")}', \`${message.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)" class="bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold py-3 px-4 rounded-xl transition-all duration-300">
+                            📋 Copiar Tudo
+                        </button>
+                        <button onclick="this.closest('.confirm-modal').remove()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-xl transition-all duration-300">
+                            ✖️ Fechar
+                        </button>
+                    </div>
+                    
+                    <div class="mt-4 p-4 bg-blue-50 rounded-xl">
+                        <p class="text-sm text-blue-700">
+                            <strong>💡 Dica:</strong> Configure o "Email Automático" para envios sem intervenção manual!
+                        </p>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function tryMailtoLink(email, encodedSubject, encodedMessage) {
+            try {
+                const mailtoUrl = `mailto:${email}?subject=${encodedSubject}&body=${encodedMessage}`;
+                window.open(mailtoUrl, '_blank');
+                showNotification('Cliente de email aberto! Verifique se o email foi criado.', 'info');
+            } catch (error) {
+                showNotification('Não foi possível abrir o cliente de email. Use "Copiar Tudo".', 'info');
+            }
+        }
+
+        function copyEmailContent(email, subject, message) {
+            const fullContent = `Para: ${email}
+Assunto: ${subject}
+
+${message}`;
+            
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(fullContent).then(() => {
+                    showNotification('✅ Email copiado! Cole no seu cliente de email.', 'info');
+                }).catch(() => {
+                    fallbackCopy(fullContent);
+                });
+            } else {
+                fallbackCopy(fullContent);
+            }
+        }
+
+        function fallbackCopy(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                showNotification('✅ Email copiado! Cole no seu cliente de email.', 'info');
+            } catch (err) {
+                showNotification('❌ Erro ao copiar. Selecione e copie manualmente.', 'info');
+            }
+            
+            document.body.removeChild(textArea);
+        }
+
+        function showNotification(message, type = 'info', onClick = null) {
+            // Remove existing notifications
+            const existing = document.querySelector('.alert-notification');
+            if (existing) {
+                existing.remove();
+            }
+
+            const notification = document.createElement('div');
+            notification.className = 'alert-notification';
+            
+            let bgColor = '#fbbf24';
+            let textColor = '#92400e';
+            let borderColor = '#f59e0b';
+            
+            if (type === 'info') {
+                bgColor = '#60a5fa';
+                textColor = '#1e40af';
+                borderColor = '#3b82f6';
+            }
+            
+            notification.style.background = bgColor;
+            notification.style.color = textColor;
+            notification.style.borderLeftColor = borderColor;
+            
+            notification.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <span class="text-lg mr-3">${type === 'info' ? 'ℹ️' : '⚠️'}</span>
+                        <span class="font-semibold">${message}</span>
+                    </div>
+                    ${onClick ? '<button class="ml-4 bg-white/20 hover:bg-white/30 px-3 py-1 rounded text-sm font-semibold">Enviar</button>' : ''}
+                    <button onclick="this.parentElement.parentElement.remove()" class="ml-2 text-lg hover:opacity-70">×</button>
+                </div>
+            `;
+            
+            if (onClick) {
+                notification.querySelector('button').addEventListener('click', onClick);
+            }
+            
+            document.body.appendChild(notification);
+            
+            // Auto remove after 10 seconds
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 10000);
         }
 
         function renderDashboard() {
@@ -493,9 +1169,11 @@
                                     <div class="font-semibold text-base mb-1">${formatDate(event.date)}</div>
                                     <div class="opacity-90 font-medium text-sm">${statusText}</div>
                                 </div>
-                                <button onclick="addToGoogleCalendar(event, ${index})" class="bg-white/40 hover:bg-white/60 text-gray-700 w-10 h-10 rounded-lg transition-all duration-200 flex items-center justify-center flex-shrink-0 ml-3">
-                                    <span class="text-lg">📅</span>
-                                </button>
+                                <div class="flex space-x-2 flex-shrink-0 ml-3">
+                                    <button onclick="addToGoogleCalendar(event, ${index})" class="bg-white/40 hover:bg-white/60 text-gray-700 w-10 h-10 rounded-lg transition-all duration-200 flex items-center justify-center">
+                                        <span class="text-lg">📅</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         
@@ -593,9 +1271,9 @@
                                 <div>
                                     <h3 class="text-xl font-semibold text-slate-700 mb-1">${car.name}</h3>
                                     <p class="text-slate-500 font-medium text-base">${car.licensePlate}</p>
+                                    ${car.alertEmail ? `<p class="text-slate-400 text-sm">📧 ${car.alertEmail}</p>` : ''}
                                 </div>
                             </div>
-
                         </div>
 
                         <div class="space-y-4">
@@ -640,23 +1318,25 @@
         function showDashboard() {
             document.getElementById('dashboardView').style.display = 'block';
             document.getElementById('carsView').style.display = 'none';
+            document.getElementById('emailConfigView').style.display = 'none';
+            document.getElementById('configView').style.display = 'none';
             document.getElementById('emptyState').style.display = cars.length === 0 ? 'block' : 'none';
             
-            document.getElementById('dashboardBtn').className = 'px-8 py-3 rounded-xl font-semibold transition-all duration-300 bg-slate-200 text-slate-700 shadow-sm';
-            document.getElementById('carsBtn').className = 'px-8 py-3 rounded-xl font-semibold transition-all duration-300 text-slate-500 hover:text-slate-700 hover:bg-slate-100';
+            document.getElementById('dashboardBtn').className = 'px-6 py-3 rounded-xl font-semibold transition-all duration-300 bg-slate-200 text-slate-700 shadow-sm';
+            document.getElementById('carsBtn').className = 'px-6 py-3 rounded-xl font-semibold transition-all duration-300 text-slate-500 hover:text-slate-700 hover:bg-slate-100';
             
             renderDashboard();
         }
 
-
-
         function showCars() {
             document.getElementById('dashboardView').style.display = 'none';
             document.getElementById('carsView').style.display = 'block';
+            document.getElementById('emailConfigView').style.display = 'none';
+            document.getElementById('configView').style.display = 'none';
             document.getElementById('emptyState').style.display = 'none';
             
-            document.getElementById('dashboardBtn').className = 'px-8 py-3 rounded-xl font-semibold transition-all duration-300 text-slate-500 hover:text-slate-700 hover:bg-slate-100';
-            document.getElementById('carsBtn').className = 'px-8 py-3 rounded-xl font-semibold transition-all duration-300 bg-slate-200 text-slate-700 shadow-sm';
+            document.getElementById('dashboardBtn').className = 'px-6 py-3 rounded-xl font-semibold transition-all duration-300 text-slate-500 hover:text-slate-700 hover:bg-slate-100';
+            document.getElementById('carsBtn').className = 'px-6 py-3 rounded-xl font-semibold transition-all duration-300 bg-slate-200 text-slate-700 shadow-sm';
             
             renderCars();
         }
@@ -697,14 +1377,29 @@
             document.getElementById('carBrand').value = car.brand || '';
             document.getElementById('carModel').value = car.model || '';
             document.getElementById('licensePlate').value = car.licensePlate;
+            document.getElementById('alertEmail').value = car.alertEmail || '';
             document.getElementById('inspectionDate').value = car.inspectionDate;
             document.getElementById('insuranceDate').value = car.insuranceDate;
             document.getElementById('iucDate').value = car.iucDate;
 
-            // Show existing logo if available
+            // Handle logo display and form fields
             const logoPreview = document.getElementById('logoPreview');
+            const logoUrlInput = document.getElementById('logoUrl');
+            const logoFileInput = document.getElementById('brandLogo');
+            
+            // Clear inputs first
+            logoUrlInput.value = '';
+            logoFileInput.value = '';
+            
             if (car.logo) {
+                // Check if logo is a URL or base64
+                if (car.logo.startsWith('http://') || car.logo.startsWith('https://')) {
+                    // It's a URL
+                    logoUrlInput.value = car.logo;
+                }
+                // Show preview regardless of type
                 logoPreview.innerHTML = `<img src="${car.logo}" alt="Logo" class="w-full h-full object-contain rounded">`;
+                logoPreview.className = 'w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden';
             } else {
                 logoPreview.innerHTML = 'Logo';
                 logoPreview.className = 'w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 text-xs';
@@ -722,6 +1417,21 @@
         }
 
         // Logo preview functionality
+        document.getElementById('logoUrl').addEventListener('input', function(e) {
+            const url = e.target.value.trim();
+            const preview = document.getElementById('logoPreview');
+            
+            if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+                preview.innerHTML = `<img src="${url}" alt="Logo Preview" class="w-full h-full object-contain rounded" onerror="this.parentElement.innerHTML='❌'; this.parentElement.className='w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center text-red-500 text-xs';">`;
+                preview.className = 'w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden';
+                // Clear file input when URL is used
+                document.getElementById('brandLogo').value = '';
+            } else if (url === '') {
+                preview.innerHTML = 'Logo';
+                preview.className = 'w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 text-xs';
+            }
+        });
+
         document.getElementById('brandLogo').addEventListener('change', function(e) {
             const file = e.target.files[0];
             const preview = document.getElementById('logoPreview');
@@ -733,6 +1443,8 @@
                     preview.className = 'w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden';
                 };
                 reader.readAsDataURL(file);
+                // Clear URL input when file is selected
+                document.getElementById('logoUrl').value = '';
             } else {
                 preview.innerHTML = 'Logo';
                 preview.className = 'w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 text-xs';
@@ -745,83 +1457,115 @@
             const brand = document.getElementById('carBrand').value;
             const model = document.getElementById('carModel').value;
             const carName = `${brand} ${model}`;
+            const editIndex = this.dataset.editIndex;
             
+            // Base car data
             const carData = {
                 name: carName,
                 brand: brand,
                 model: model,
                 licensePlate: document.getElementById('licensePlate').value,
+                alertEmail: document.getElementById('alertEmail').value,
                 inspectionDate: document.getElementById('inspectionDate').value,
                 insuranceDate: document.getElementById('insuranceDate').value,
-                iucDate: document.getElementById('iucDate').value
+                iucDate: document.getElementById('iucDate').value,
+                logo: null
             };
 
-            // Handle logo upload
+            // If editing, preserve existing logo first
+            if (editIndex !== undefined && cars[parseInt(editIndex)]) {
+                carData.logo = cars[parseInt(editIndex)].logo || null;
+            }
+
+            // Check for URL logo first
+            const logoUrl = document.getElementById('logoUrl').value.trim();
             const logoFile = document.getElementById('brandLogo').files[0];
-            const editIndex = this.dataset.editIndex;
             
-            if (logoFile) {
+            if (logoUrl && (logoUrl.startsWith('http://') || logoUrl.startsWith('https://'))) {
+                // Use URL logo
+                carData.logo = logoUrl;
+                console.log('Using URL logo:', logoUrl);
+                saveCarData(carData, editIndex);
+            } else if (logoFile) {
+                // Use file logo
+                console.log('Processing new logo file...');
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     carData.logo = e.target.result;
-                    saveCarData();
+                    console.log('New logo processed, size:', e.target.result.length);
+                    saveCarData(carData, editIndex);
                 };
                 reader.readAsDataURL(logoFile);
             } else {
-                // If editing and no new logo selected, keep existing logo
-                if (editIndex !== undefined) {
-                    carData.logo = cars[parseInt(editIndex)].logo;
-                }
-                saveCarData();
-            }
-
-            function saveCarData() {
-                const button = document.querySelector('#carForm button[type="submit"]');
-                const form = document.getElementById('carForm');
-                
-                if (editIndex !== undefined) {
-                    // Editing existing car
-                    cars[parseInt(editIndex)] = carData;
-                    button.textContent = 'Carro Atualizado!';
-                    delete form.dataset.editIndex;
-                } else {
-                    // Adding new car
-                    cars.push(carData);
-                    button.textContent = 'Carro Adicionado!';
-                }
-
-                saveCars();
-                renderCars();
-                renderDashboard();
-
-                // Clear form and logo preview
-                form.reset();
-                const logoPreview = document.getElementById('logoPreview');
-                logoPreview.innerHTML = 'Logo';
-                logoPreview.className = 'w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 text-xs';
-                
-                // Show success message
-                button.classList.add('bg-green-600');
-                button.classList.remove('bg-gray-900');
-                
-                setTimeout(() => {
-                    button.innerHTML = '<span class="text-lg mr-2">🚗</span>Adicionar Carro';
-                    button.classList.remove('bg-green-600');
-                    button.classList.add('bg-gray-900');
-                }, 2000);
+                console.log('No new logo, using existing:', carData.logo ? 'Yes' : 'No');
+                saveCarData(carData, editIndex);
             }
         });
 
+        function saveCarData(carData, editIndex) {
+            const button = document.querySelector('#carForm button[type="submit"]');
+            const form = document.getElementById('carForm');
+            
+            console.log('Saving car data:', {
+                name: carData.name,
+                email: carData.alertEmail,
+                hasLogo: !!carData.logo,
+                logoSize: carData.logo ? carData.logo.length : 0
+            });
+            
+            if (editIndex !== undefined) {
+                // Editing existing car
+                cars[parseInt(editIndex)] = carData;
+                button.textContent = 'Carro Atualizado!';
+                delete form.dataset.editIndex;
+                console.log('Updated car at index:', editIndex);
+            } else {
+                // Adding new car
+                cars.push(carData);
+                button.textContent = 'Carro Adicionado!';
+                console.log('Added new car, total cars:', cars.length);
+            }
 
+            // Save to storage
+            saveCars();
+            
+            // Update displays
+            renderCars();
+            renderDashboard();
+
+            // Clear form and logo preview
+            form.reset();
+            document.getElementById('logoUrl').value = '';
+            document.getElementById('brandLogo').value = '';
+            const logoPreview = document.getElementById('logoPreview');
+            logoPreview.innerHTML = 'Logo';
+            logoPreview.className = 'w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 text-xs';
+            
+            // Show success message
+            button.style.backgroundColor = '#16a34a';
+            button.style.color = 'white';
+            
+            setTimeout(() => {
+                button.innerHTML = '<span class="text-lg mr-2">🚗</span>Adicionar Carro';
+                button.style.backgroundColor = '';
+                button.style.color = '';
+            }, 2000);
+        }
+
+        // Auto-check for alerts every hour
+        setInterval(checkAlerts, 3600000); // 1 hour = 3600000ms
 
         // Initialize app
         async function initApp() {
             await loadCars();
+            initEmailJS();
             showDashboard();
+            // Check for alerts on startup
+            setTimeout(checkAlerts, 2000);
         }
 
         // Initial render
         initApp();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98acadded78ce3b0',t:'MTc1OTgzMjU2NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98ad0b8e6104e3b0',t:'MTc1OTgzNjQwMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
